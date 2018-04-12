@@ -10,13 +10,23 @@ import java.net.UnknownHostException;
 public class OutSktUDP {
 	int portOut = 4445;
 	DatagramSocket socket = new DatagramSocket();
-	int bufSize = 256;
+	int bufSize;
 	
 
 	public OutSktUDP(int bufSize) throws IOException {
 		this.bufSize = bufSize;
 		// Already initialized
 		
+	}
+	
+	public DatagramPacket receive() throws IOException {
+		byte[] buf = new byte[bufSize];
+		DatagramPacket packet = new DatagramPacket(buf, buf.length);
+		// Blocking
+		socket.receive(packet);
+		
+		return packet;
+
 	}
 	
 	public void closeSkt() {

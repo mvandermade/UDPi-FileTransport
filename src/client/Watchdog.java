@@ -1,4 +1,4 @@
-package srv;
+package client;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -9,10 +9,10 @@ import java.nio.charset.StandardCharsets;
 public class Watchdog implements Runnable {
 	
 	int pollQueueTime = 9000;
-	private SMain srv;
+	private CMain cl;
 	
-	public Watchdog(SMain sMain) {
-		this.srv = sMain;
+	public Watchdog(CMain cMain) {
+		this.cl = cMain;
 	}
 	
 	public void run() {
@@ -32,7 +32,7 @@ public class Watchdog implements Runnable {
 				
 				//System.out.print("poll");
 				
-				DatagramPacket datagramPacket = srv.getInboundQueue().poll();
+				DatagramPacket datagramPacket = cl.getInboundQueue().poll();
 				
 				
 				//System.out.print(polledObject);
@@ -87,33 +87,32 @@ public class Watchdog implements Runnable {
 
 	private void handleTextDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException {
 		// TODO Auto-generated method stub
-		System.out.println(">>CMD>>");
+		System.out.println("!");
 		
 		//+1 remove the sorting byte
 		String stringIn = new String(datagramPacket.getData(), datagramPacket.getOffset()+1, datagramPacket.getLength()-1);
 		stringIn = stringIn.replace("\u0000", "");
 		
 		System.out.println(stringIn);
-		System.out.println(">>RESPONSE>>");
 		
-		String responseOut = "";
-		switch (stringIn) {
-			
-			case("ls"): {
-				responseOut = "--FILE LIST--";
-				responseOut += srv.getFileMan().listFiles();
-				break;
-			} default: {
-				responseOut = "unknown, try: ls";
-			}
-		}
-		
-		System.out.println(responseOut);
-		try {
-			srv.getInSktUDP().sendStrReplyTo(responseOut, datagramPacket);
-		} catch (ArrayIndexOutOfBoundsException e) {
-			System.out.println("error Watchdog tried to send but packet size too big");
-		}
+//		String responseOut = "";
+//		switch (stringIn) {
+//			
+//			case("ls"): {
+//				responseOut = "--FILE LIST--";
+//				responseOut += cl.getFileMan().listFiles();
+//				break;
+//			} default: {
+//				responseOut = "unknown, try: ls";
+//			}
+//		}
+//		
+//		System.out.println(responseOut);
+//		try {
+//			cl.getInSktUDP().sendStrReplyTo(responseOut, datagramPacket);
+//		} catch (ArrayIndexOutOfBoundsException e) {
+//			System.out.println("error Watchdog tried to send but packet size too big");
+//		}
 		
 	}
 
