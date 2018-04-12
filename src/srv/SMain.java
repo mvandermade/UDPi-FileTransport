@@ -17,14 +17,24 @@ public class SMain {
 	private final Thread watchdog;
 	private final InSktUDP inSktUDP;
 	private int datagramSize = 256;
+	private int headerSize = 6; // Header is FS|4-byte-chunckID|1-byte-session|<>
+	private int chuncksize;
 	private int listnerPort = 4445;
 	private FileMan fileMan;
+	private TransferDB transferDB; 
+	private String basePath;
+	
 	
 	public SMain() throws IOException {
 		
 		// Filemanager in root
-		String basePath = new File("").getAbsolutePath()+"/fileroot";
+		setBasePath(new File("").getAbsolutePath()+"/fileroot");
 		this.fileMan = new FileMan(basePath);
+		
+		// TransferDB for keeping the transfers
+		this.setTransferDB(new TransferDB(this));
+		// chucksize is reduced by 9 due to header
+		chuncksize = datagramSize - headerSize;
 		
 		// Start Watchdog that will process the inboundQueue
 		// Watchdog can send messages
@@ -67,6 +77,30 @@ public class SMain {
 
 	public void setFileMan(FileMan fileMan) {
 		this.fileMan = fileMan;
+	}
+
+	public TransferDB getTransferDB() {
+		return transferDB;
+	}
+
+	public void setTransferDB(TransferDB transferDB) {
+		this.transferDB = transferDB;
+	}
+
+	public String getBasePath() {
+		return basePath;
+	}
+
+	public void setBasePath(String basePath) {
+		this.basePath = basePath;
+	}
+
+	public int getChuncksize() {
+		return chuncksize;
+	}
+
+	public void setChuncksize(int chuncksize) {
+		this.chuncksize = chuncksize;
 	}
 
 }

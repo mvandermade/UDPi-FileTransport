@@ -7,7 +7,6 @@ import java.net.UnknownHostException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import shared.InSktUDP;
-import shared.OutSktUDP;
 
 public class Sender implements Runnable {
     private InSktUDP inSktUDP;

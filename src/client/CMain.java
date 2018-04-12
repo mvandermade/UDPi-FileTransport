@@ -46,8 +46,6 @@ public class CMain {
 	    
 	    System.out.println("Begin typing in the console and hit enter to send: ");
 	    
-	    
-	    
 	}
 
 	public InSktUDP getInSktUDP() {

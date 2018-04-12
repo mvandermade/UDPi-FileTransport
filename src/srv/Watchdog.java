@@ -1,5 +1,6 @@
 package srv;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -45,6 +46,8 @@ public class Watchdog implements Runnable {
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
+					} catch (StringIndexOutOfBoundsException e) {
+						e.printStackTrace();
 					}
 					
 					
@@ -60,7 +63,7 @@ public class Watchdog implements Runnable {
 	
 	}
 
-	public void handleInboundDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException {
+	public void handleInboundDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException, StringIndexOutOfBoundsException {
 		byte firstByte = datagramPacket.getData()[0];
 		
 		// Check what is the content based on the first byte
@@ -85,7 +88,7 @@ public class Watchdog implements Runnable {
 		
 	}
 
-	private void handleTextDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException {
+	private void handleTextDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException, StringIndexOutOfBoundsException {
 		// TODO Auto-generated method stub
 		System.out.println(">>CMD>>");
 		
@@ -97,15 +100,45 @@ public class Watchdog implements Runnable {
 		System.out.println(">>RESPONSE>>");
 		
 		String responseOut = "";
-		switch (stringIn) {
-			
-			case("ls"): {
-				responseOut = "--FILE LIST--";
-				responseOut += srv.getFileMan().listFiles();
-				break;
-			} default: {
-				responseOut = "unknown, try: ls";
+		
+		if (stringIn.equals("ls")) {
+			// Repeat the command so the sender knows its an answer to it
+			responseOut = stringIn+";";
+			responseOut += "--FILE LIST--";
+			responseOut += srv.getFileMan().listFiles();
+		} else if (stringIn.length() >= 8 && stringIn.substring(0, 8).equals("download")) {
+			responseOut = stringIn+";";
+			if (stringIn.length() > 9) {
+				String filename = stringIn.substring(9, stringIn.length());
+				// Allocate download slot
+				responseOut += srv.getTransferDB().newOutboundTransfer(filename,datagramPacket.getPort(),datagramPacket.getAddress());
+				// Response contains session, totalblocks, blocksize, hash
+			} else {
+				responseOut+= "Too little arguments for download: download <filename>";
 			}
+			
+		} else if (stringIn.length() >= 4 && stringIn.substring(0, 4).equals("hash")) {
+			responseOut = stringIn+";";
+			if (stringIn.length() > 6) {
+				// Ommitting the space
+				String filename = stringIn.substring(5, stringIn.length());
+				
+				File f = new File(srv.getBasePath()+"/"+filename);
+				if(f.exists() && !f.isDirectory()) { 
+					String hash= "";
+					hash = srv.getFileMan().getHash(f);
+					System.out.print(hash);
+					responseOut+=hash;
+					
+				} else {
+					responseOut += "File: "+filename+"\ndoesn't exist";
+				}
+			} else {
+				responseOut+= "Too little arguments for hash: hash <filename>";
+			}
+			
+		} else {
+			responseOut = "unknown, try: ls";
 		}
 		
 		System.out.println(responseOut);
