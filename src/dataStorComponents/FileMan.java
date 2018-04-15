@@ -2,18 +2,24 @@ package dataStorComponents;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Queue;
 
 public class FileMan {
 	
 	File folder;
+	private String path;
+	
+	private final Queue<Integer> readers = null;
 	
 	public FileMan(String path) {
 		
 		this.folder = new File(path);
-		
+		this.path = path;
 		
 	}
 	
@@ -98,5 +104,23 @@ public class FileMan {
 	    //return complete hash
 	   return sb.toString();
 	}
+
+	public File makefile(String filename, int fileSizeBytes) {
+		// TODO Auto-generated method stub
+		FileOutputStream s;
+		try {
+			s = new FileOutputStream(this.path+"/"+filename);
+
+			byte[] buf = new byte[fileSizeBytes];
+			s.write(buf);
+			s.flush();
+			s.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return new File(this.path+"/"+filename);
+	}
+	
 
 }

@@ -33,6 +33,9 @@ public class SMain {
 	    
 	    dataStor.getUDPreceiver().start();
 	    System.out.println("Server recv booted");
+	    
+	    dataStor.getUploadSlotThread().start();
+	    System.out.println("Server upload thread booted");
 	}
 
 	public DataStor getDataStor() {

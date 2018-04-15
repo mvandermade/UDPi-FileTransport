@@ -11,6 +11,7 @@ import dataStorComponents.InSktUDP;
 import dataStorComponents.InboundDatagramUtil;
 import dataStorComponents.Receiver;
 import dataStorComponents.TransferDB;
+import dataStorComponents.UploadSlotThread;
 import dataStorComponents.Watchdog;
 import srv.InboundServerUtil;
 
@@ -18,15 +19,16 @@ public class DataStor {
 	private String basePath;
 	private FileMan fileMan;
 	private int datagramSize = 256;
-	private int headerSize = 6; // Header is FS|4-byte-chunckID|1-byte-session|<>
+	private int headerSize = 6; // Header is TYPE|4-byte-chunckID|1-byte-session|<>
 	private int chuncksize;
 	private TransferDB transferDB;
 	private Thread watchdog; 
-	private int listnerPort = 4445;
 	private InSktUDP inSktUDP = null;
 	private Thread UDPreceiver;
 	private final Queue<DatagramPacket> inboundQueue = new ConcurrentLinkedQueue<>();
 	private InboundDatagramUtil inboundDatagramUtil;
+	private int listnerPort;
+	private Thread uploadSlotThread;
 
 	
 	public DataStor(int listnerPort, String relativePath, InboundDatagramUtil inboundDatagramUtil) {
@@ -42,6 +44,8 @@ public class DataStor {
 		setChuncksize(datagramSize - headerSize);
 		
 	    setWatchdog(new Thread(new Watchdog(this)));
+	    
+	    this.setUploadSlotThread(new Thread(new UploadSlotThread(this)));
 	    
 	    
 	    try {
@@ -120,6 +124,14 @@ public class DataStor {
 
 	public void setInboundDatagramUtil(InboundDatagramUtil inboundDatagramUtil) {
 		this.inboundDatagramUtil = inboundDatagramUtil;
+	}
+
+	public Thread getUploadSlotThread() {
+		return uploadSlotThread;
+	}
+
+	public void setUploadSlotThread(Thread uploadSlotThread) {
+		this.uploadSlotThread = uploadSlotThread;
 	}
 
 }
