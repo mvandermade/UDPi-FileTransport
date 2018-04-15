@@ -6,6 +6,4 @@ import java.net.UnknownHostException;
 
 public interface InboundDatagramUtil {
 	void handleTextDatagram(DatagramPacket datagramPacket) throws UnknownHostException, IOException, StringIndexOutOfBoundsException;
-	void handleFileDatagram(DatagramPacket datagramPacket);
-	void handleReqestFileDatagram(DatagramPacket datagramPacket);
 }

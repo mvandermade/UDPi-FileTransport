@@ -43,7 +43,7 @@ public class InboundServerUtil implements InboundDatagramUtil {
 			if (stringIn.length() > 9) {
 				String filename = stringIn.substring(9, stringIn.length());
 				// Allocate download slot
-				responseOut += srv.getDataStor().getTransferDB().newOutboundTransfer(filename,datagramPacket.getPort(),datagramPacket.getAddress());
+				responseOut += srv.getDataStor().getTransferDB().newOutboundTransfer(filename,datagramPacket);
 				// Response contains session, totalblocks, blocksize, hash
 			} else {
 				responseOut+= "Too little arguments for download: download <filename>\nShow filenames with command \"ls\"";
@@ -79,24 +79,6 @@ public class InboundServerUtil implements InboundDatagramUtil {
 		} catch (ArrayIndexOutOfBoundsException e) {
 			System.out.println("error Watchdog tried to send but packet size too big");
 		}
-	}
-
-	@Override
-	public void handleFileDatagram(DatagramPacket datagramPacket) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void handleReqestFileDatagram(DatagramPacket datagramPacket) {
-		
-		byte ses = datagramPacket.getData()[1];
-		byte[] reqChunck = Arrays.copyOfRange(datagramPacket.getData(), 2, 5);
-		int x = java.nio.ByteBuffer.wrap(reqChunck).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt();
-		
-		// Fix me
-		srv.getDataStor().getTransferDB().enqueueInitialDownload();
-		
 	}
 
 }

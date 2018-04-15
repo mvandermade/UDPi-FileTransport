@@ -18,15 +18,15 @@ public class KeyboardSenderThread implements Runnable {
     	while (true) {
 			
 			// Check for messages
-			
+			try {
+				Thread.sleep(pollQueueTime);
+			} catch (InterruptedException e) {
+				//e.printStackTrace()		
+				// AWAKE!!
+			}
 			boolean done = false;
 			while (!done) {
-				try {
-					Thread.sleep(pollQueueTime);
-				} catch (InterruptedException e) {
-					//e.printStackTrace()		
-					// AWAKE!!
-				}
+
 				//System.out.print("poll");
 				
 				String keyboardInput = cl.getKeyboardInputQueue().poll();

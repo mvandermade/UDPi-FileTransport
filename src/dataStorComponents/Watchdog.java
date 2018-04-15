@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import shared.DataStor;
 
@@ -69,18 +70,41 @@ public class Watchdog implements Runnable {
 			case(0x02): {
 				dataStor.getInboundDatagramUtil().handleTextDatagram(datagramPacket);
 				break;
-			// FS 0x1C = inbound data (meaning: response after I sent BELL)
+			// FS 0x1C = inbound data from uploadslot. FS<sessionId<4byte chunck int><data>
 			} case (0x1C): {
-				dataStor.getInboundDatagramUtil().handleFileDatagram(datagramPacket);
+				handleBufInDownloadSlotDatagram(datagramPacket);
 				break;
-			// BELL 0x07 = request for data
+			// BELL 0x07 = response of client to: OK, initialises uploadslot
 			} case (0x07): {
-				dataStor.getInboundDatagramUtil().handleReqestFileDatagram(datagramPacket);
+				handleRequestWholeFileDatagram(datagramPacket);
+				break;
+				// Form feed, it is a request to an uploadslot to send an FS.
+			} case (0x0C):{
+				handleUploadslotRequest(datagramPacket);
+				break;
 			} default: {
 				System.out.println("bark");
 			}
 		}
 		
-	} // end run
+	} // end handleInboundDatagram
+	
+	private void handleUploadslotRequest(DatagramPacket datagramPacket) {
+		dataStor.getTransferDB().handleUploadRequest(datagramPacket);
+		
+	}
+
+	public void handleBufInDownloadSlotDatagram(DatagramPacket datagramPacket) {
+		System.out.println(Arrays.toString(datagramPacket.getData()));
+		//System.out.println("got FS"+datagramPacket.getData()[1] +"chunck:"+shared.ByteCalculator.byteArrayToLeInt(Arrays.copyOfRange(datagramPacket.getData(), 2, 5)));
+
+	}
+
+	public void handleRequestWholeFileDatagram(DatagramPacket datagramPacket) {
+				
+		// The whole file is enqueued (all parts are enqueued for first broadcast)
+		dataStor.getTransferDB().enqueueWholeFile(datagramPacket);
+		
+	}
 
 }
