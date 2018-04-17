@@ -43,9 +43,11 @@ public class TransferInfoInFile {
 	private long timerLastScrape;
 	private long timerLastPkt;
 	private long deltaSum;
+	private String[] parts;
 	
 
 	public TransferInfoInFile(String[] parts, String filename, DatagramPacket datagramPacket, DataStor dataStor) {
+		this.parts = parts;
 		this.dataStor = dataStor;
 		this.reqPort = datagramPacket.getPort();
 		this.reqAddress = datagramPacket.getAddress();
@@ -197,6 +199,9 @@ public class TransferInfoInFile {
 					return false;
 				}
 			});
+			
+			// Notify the server
+			dataStor.getInSktUDP().sendStr("finish "+parts[5], this.getReqAddress(), this.getReqPort());
 
 			
 		} catch (IOException e) {

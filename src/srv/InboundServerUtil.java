@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import dataStorComponents.InboundDatagramUtil;
+import dataStorComponents.TransferInfoInFile;
 
 public class InboundServerUtil implements InboundDatagramUtil {
 
@@ -43,8 +44,9 @@ public class InboundServerUtil implements InboundDatagramUtil {
 			if (stringIn.length() > 9) {
 				String filename = stringIn.substring(9, stringIn.length());
 				// Allocate download slot
-				responseOut += srv.getDataStor().getTransferDB().newOutboundTransfer(filename,datagramPacket);
+				responseOut += srv.getDataStor().getTransferDB().newOutboundTransfer(filename,datagramPacket.getPort(),datagramPacket.getAddress() );
 				// Response contains session, totalblocks, blocksize, hash
+				// The client should repeat to this using BELL
 			} else {
 				responseOut+= "Too little arguments for download: download <filename>\nShow filenames with command \"ls\"";
 			}
@@ -67,6 +69,61 @@ public class InboundServerUtil implements InboundDatagramUtil {
 				}
 			} else {
 				responseOut+= "Too little arguments for hash: hash <filename>";
+			}
+			
+		} else if (stringIn.length() >= 6 && stringIn.substring(0, 6).equals("finish")) {
+			responseOut = stringIn+";i observed packet loss from my side : requests RxTx";
+			if (stringIn.length() > 7) {
+				// Ommitting the space
+				int sessionIdin = Integer.parseInt(stringIn.substring(7, stringIn.length()));
+				//byte sessionIdin = (byte) stringIn.charAt(8);
+				
+				// Remove from queue
+				srv.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
+					if (sessionIdin==c.getSessionId() &&
+							c.getReqAddress().equals(datagramPacket.getAddress()) &&
+									c.getReqPort() == datagramPacket.getPort()) {
+						System.out.println("uploadremoved from queue");
+						return true;
+						
+					} else {
+						return false;
+					}
+				});
+			} else {
+				responseOut+= "Too little arguments for finish: finish <(char)sessionId>";
+			}
+		
+		} else	if (stringIn.length() >= 10) {
+			
+			if (stringIn.split(";").length == 2) {
+				responseOut+="len is 2";
+				if(stringIn.split(";")[1].substring(0, 6).equals("upload")) {
+			
+					// Check if got OK
+					String answ = stringIn.split(";")[1].substring(7,stringIn.split(";")[1].length());
+					responseOut+=answ;
+					if (answ.substring(0,2).equals("OK")) {
+						System.out.println("Upload Initializing (for client)");
+						String[] parts = answ.split(",");
+						// part 0 = OK
+						if (parts.length == 6) {
+							System.out.println("Prepare download slot for upload");
+							int integerSessId = Integer.parseInt(parts[5]);
+							// omit download<space> to get the filename
+							String filename = stringIn.split(";")[0];
+							
+							srv.getDataStor().getTransferDB().prepareDownloadSlot(
+									new TransferInfoInFile(parts, filename, datagramPacket, srv.getDataStor())
+									);
+							// The server might in the future be programmed to start broadcasting ...
+							System.out.println("Sending BELL to client");
+							srv.getDataStor().getInSktUDP().sendBellReplyTo((byte)integerSessId, datagramPacket);
+							srv.getDataStor().getScrapeAgent().unwaitThread();
+							
+						}
+					}
+				}
 			}
 			
 		} else {

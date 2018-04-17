@@ -29,13 +29,16 @@ public class InboundClientUtil implements InboundDatagramUtil {
 		
 		try {
 			// Check if I understand this ?
-			if (cl.getMostRecentKeyboardInput().equals(
+			if (null!=cl.getMostRecentKeyboardInput() && cl.getMostRecentKeyboardInput().length()>2 && cl.getMostRecentKeyboardInput().equals(
 					stringIn.substring(0, cl.getMostRecentKeyboardInput().length())
 							)
 					) {
+				// Remove ; from server
+				System.out.println(stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length()));
+				
 				
 				// 10, including the OK
-				if (stringIn.length() >= 10 && stringIn.substring(0, 8).equals("download")) {
+				if (stringIn.length() >= 10 && stringIn.substring(0, 9).equals("download;")) {
 					// Check if got OK
 					String answ = stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length());
 					if (answ.substring(0,2).equals("OK")) {
@@ -58,10 +61,30 @@ public class InboundClientUtil implements InboundDatagramUtil {
 							
 						}
 					}
-				}
-				// Remove ;
-				System.out.println(stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length()));
 				
+				
+				}
+
+			} else if (stringIn.length() >= 6 && stringIn.substring(0, 6).equals("finish")) {
+				System.out.println(stringIn+";i observed packet loss from my side : requests RxTx");
+				if (stringIn.length() > 7) {
+					// Ommitting the space
+					int sessionIdin = Integer.parseInt(stringIn.substring(7, stringIn.length()));
+					//byte sessionIdin = (byte) stringIn.charAt(8);
+					
+					// Remove from queue
+					cl.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
+						if (sessionIdin==c.getSessionId() &&
+								c.getReqAddress().equals(datagramPacket.getAddress()) &&
+										c.getReqPort() == datagramPacket.getPort()) {
+							System.out.println("uploadremoved from queue");
+							return true;
+							
+						} else {
+							return false;
+						}
+					});
+				}
 			} else {
 				// INFO message or something?
 				System.out.println(">server notifies:\n\t\t\t\t"+stringIn);
@@ -69,7 +92,7 @@ public class InboundClientUtil implements InboundDatagramUtil {
 		} catch (StringIndexOutOfBoundsException e) {
 			// This may occur when the server randomly 
 			//e.printStackTrace();
-			System.out.println(">server notifies:\n\t\t\t\t"+stringIn);
+			System.out.println(">(stringindex out of bounds, plain:) server notifies:\n\t\t\t\t"+stringIn);
 		}
 		
 		

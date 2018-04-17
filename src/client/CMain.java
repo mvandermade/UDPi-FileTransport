@@ -41,11 +41,8 @@ public class CMain {
 	    System.out.println("booted keyBoardsender");
 	    // Interrupted also after watchdog finishes
 	    this.keyboardInputListner = new KeyBoardInputListner(this);
-	    this.keyboardInputListnerThread = new Thread(keyboardInputListner);
-	    keyboardInputListnerThread.start();
 	    
-	    
-	    System.out.println("booted keyboard listner");
+
 	    
 		// Start Watchdog that will process the inboundQueue
 		// Watchdog can send messages
@@ -56,8 +53,15 @@ public class CMain {
 	    dataStor.getUDPreceiver().start();
 	    System.out.println("Client recv booted");
 	    
+	    dataStor.getUploadSlotThread().start();
+	    System.out.println("Client upload thread booted");
+	    
 	    dataStor.getScrapeAgentThread().start();
 	    System.out.println("Scrape Agent booted");
+	    
+	    this.keyboardInputListnerThread = new Thread(keyboardInputListner);
+	    keyboardInputListnerThread.start();
+	    System.out.println("booted keyboard listner");
 	    
 	    
 	}

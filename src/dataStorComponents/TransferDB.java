@@ -45,15 +45,16 @@ public class TransferDB {
 
 	private byte sessionCount = 0x00; 
 
-	public String newOutboundTransfer(String filename, DatagramPacket datagramPacket) {
+	public String newOutboundTransfer(String filename, int targetPort, InetAddress targetAddr) {
 		// Actually write this to the console
 		String response = "";
 		
 		File f = new File(dataStor.getBasePath()+"/"+filename);
+		System.out.println(f.getAbsolutePath());
 		
 		if(f.exists() && !f.isDirectory()) {
 			try {
-				TransferInfoOutFile temp = new TransferInfoOutFile(f, datagramPacket.getPort(), datagramPacket.getAddress(), dataStor);
+				TransferInfoOutFile temp = new TransferInfoOutFile(f, targetPort, targetAddr, dataStor);
 				response += temp.strReport();
 				// Client needs to report first, enqueue the outbound file object already
 				awaitingStartTransferList.add(temp);

@@ -36,6 +36,9 @@ public class SMain {
 	    
 	    dataStor.getUploadSlotThread().start();
 	    System.out.println("Server upload thread booted");
+	    
+	    dataStor.getScrapeAgentThread().start();
+	    System.out.println("Server Scrape Agent booted");
 	}
 
 	public DataStor getDataStor() {
