@@ -78,9 +78,9 @@ public class Watchdog implements Runnable {
 				break;
 			// BELL 0x07 = response of client to: OK, initialises uploadslot
 			} case (0x07): {
-				//System.out.println("BELL IN");
+				System.out.println("BELL IN");
 				handleRequestWholeFileDatagram(datagramPacket);
-				//System.out.println(">>BELL SENT");
+				System.out.println(">>BELL SENT");
 				break;
 				// Form feed, it is a request to an uploadslot to send an FS.
 			} case (0x0C):{

@@ -19,6 +19,8 @@ public class CMain {
 	private final Queue<String> keyboardInputQueue = new ConcurrentLinkedQueue<>();
 	private KeyBoardInputListner keyboardInputListner;
 	private KeyboardSender keyboardSender;
+	private int listenPort;
+	private String clientRootFolder;
 
 	public KeyboardSender getKeyboardSender() {
 		return keyboardSender;
@@ -29,16 +31,23 @@ public class CMain {
 	}
 
 	public CMain() throws IOException {
+		System.out.println("CLIENT");
 		// dataStor handles all shared components
 		// As well as booting threads, so reference is easier.
 		this.serverPort = 4445;
-		dataStor = new DataStor(4448, "clientroot", new InboundClientUtil(this));
+		this.listenPort = 4448;
+		this.clientRootFolder = "clientroot";
+		dataStor = new DataStor(listenPort, clientRootFolder, new InboundClientUtil(this));
+		System.out.println("CONNECTING  TO PORT: "+serverPort);
+		System.out.println("LISTEN      AT PORT: "+listenPort);
+		System.out.println("WorkingDir         : "+clientRootFolder);
+		
 	    
 		this.keyboardSender = new KeyboardSender(this);
 	    senderThread = new Thread(keyboardSender);
 	    senderThread.start();
 	    
-	    System.out.println("booted keyBoardsender");
+	    //System.out.println("booted keyBoardsender");
 	    // Interrupted also after watchdog finishes
 	    this.keyboardInputListner = new KeyBoardInputListner(this);
 	    
@@ -47,21 +56,21 @@ public class CMain {
 		// Start Watchdog that will process the inboundQueue
 		// Watchdog can send messages
 	    dataStor.getWatchdogThread().start();
-	    System.out.println("booted watchdog");
+	    //System.out.println("booted watchdog");
 	    
 		// Receiver gets the watchdog thread reference to toggle on new message
 	    dataStor.getUDPreceiver().start();
-	    System.out.println("Client recv booted");
+	    //System.out.println("Client recv booted");
 	    
 	    dataStor.getUploadSlotThread().start();
-	    System.out.println("Client upload thread booted");
+	    //System.out.println("Client upload thread booted");
 	    
 	    dataStor.getScrapeAgentThread().start();
-	    System.out.println("Scrape Agent booted");
+	    //System.out.println("Scrape Agent booted");
 	    
 	    this.keyboardInputListnerThread = new Thread(keyboardInputListner);
 	    keyboardInputListnerThread.start();
-	    System.out.println("booted keyboard listner");
+	    //System.out.println("booted keyboard listner");
 	    
 	    
 	}

@@ -72,7 +72,8 @@ public class InboundServerUtil implements InboundDatagramUtil {
 			}
 			
 		} else if (stringIn.length() >= 6 && stringIn.substring(0, 6).equals("finish")) {
-			responseOut = stringIn+";i observed packet loss from my side : requests RxTx";
+			responseOut = stringIn;
+			final String[] writeInTemp = new String[1];
 			if (stringIn.length() > 7) {
 				// Ommitting the space
 				int sessionIdin = Integer.parseInt(stringIn.substring(7, stringIn.length()));
@@ -84,12 +85,14 @@ public class InboundServerUtil implements InboundDatagramUtil {
 							c.getReqAddress().equals(datagramPacket.getAddress()) &&
 									c.getReqPort() == datagramPacket.getPort()) {
 						System.out.println("uploadremoved from queue");
+						writeInTemp[0] = c.getPacketlossInfo();
 						return true;
 						
 					} else {
 						return false;
 					}
 				});
+				responseOut+=";"+writeInTemp[0];
 			} else {
 				responseOut+= "Too little arguments for finish: finish <(char)sessionId>";
 			}

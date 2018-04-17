@@ -44,6 +44,8 @@ public class TransferInfoInFile {
 	private long timerLastPkt;
 	private long deltaSum;
 	private String[] parts;
+	private int fileSpeed;
+	private float fileTimeElapsedSeconds;
 	
 
 	public TransferInfoInFile(String[] parts, String filename, DatagramPacket datagramPacket, DataStor dataStor) {
@@ -67,7 +69,7 @@ public class TransferInfoInFile {
 		this.chuncksRetransmitTimes = new int[chunckTotal];
 		this.chunckOK = new boolean[chunckTotal];
 		// Calculate number of chuncksize
-		this.timeStamp = ZonedDateTime.now().toInstant().toEpochMilli();
+		this.timeStamp = this.getLongTimeEpochSecond();
 		
 		this.file = dataStor.getFileMan().makefile(filename, fileSizeBytes);
 		
@@ -176,23 +178,26 @@ public class TransferInfoInFile {
 	public void ceaseDownload() {
 		try {
 			System.out.println("download OK. Report for: "+file.getName());
-			System.out.println(chunckSize/((deltaSum/countOK)/1000)+"MegaByte/s"); //mb/s
+			this.fileTimeElapsedSeconds = deltaSum/1000000000;
+			this.fileSpeed = (int)((float)fileSizeBytes/( fileTimeElapsedSeconds ));
+			
+			System.out.println(dataStor.getFileMan().sizeHumanReadableStr(fileSpeed)+"/s, took "+fileTimeElapsedSeconds+" seconds total"); //mb/s
 			this.raf.close();
 			
-			System.out.println("HASHDISK  :"+dataStor.getFileMan().getHash(this.file));
-			System.out.println("HASHSERVER:"+this.shaChecksumRemote);
+			//System.out.println("HASHDISK  :"+dataStor.getFileMan().getHash(this.file));
+			//System.out.println("HASHSERVER:"+this.shaChecksumRemote);
 			
 			if (this.shaChecksumRemote.equals(dataStor.getFileMan().getHash(this.file))) {
 				System.out.println("HASH OK");
 			} else {
 				System.out.println("Hash failed :(");
 			}
-			System.out.println("Retransmit count: "+IntStream.of(chuncksRetransmitTimes).sum());
+			System.out.println("Client retransmit count: "+IntStream.of(chuncksRetransmitTimes).sum());
 			
 			// Remove from queue
 			dataStor.getTransferDB().getDownloadSlots().removeIf((c)->{
 				if (c.file.getAbsolutePath().equals(this.file.getAbsolutePath())) {
-					System.out.println("removed from queue");
+					//System.out.println("removed from queue");
 					return true;
 					
 				} else {
@@ -226,13 +231,16 @@ public class TransferInfoInFile {
 			// yes it is time for a scrape
 			// Report ANY false to the server
 			
-			if ((float)countOK/(float)chunckTotal > 0.99) {
+			// 5 sec retransmission window
+			// 10MB/s should be sufficient ?
+			if ((float)countOK/(float)chunckTotal > 0.99 || (this.getLongTimeEpochSecond() - this.timeStamp)/1000000000 > (this.fileSizeBytes/10000000) || (deltaSum/countOC) > 1000000000) {
+				this.timeStamp = this.getLongTimeEpochSecond();
 				for (int i = 0; i < chunckOK.length; i++) {
 					if (!chunckOK[i]) {
 						dataStor.getInSktUDP().sendChunckRequestTo(this.getSessionId(), i, this.getReqAddress(), this.getReqPort());
 						chuncksRetransmitTimes[i]++;
 						
-						System.out.println("retransmission request for"+i);
+						//System.out.println("retransmission request for"+i);
 					}
 				}
 			} else {

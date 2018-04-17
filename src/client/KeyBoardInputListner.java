@@ -60,7 +60,6 @@ public class KeyBoardInputListner implements Runnable {
 				} else {
 					cl.getKeyboardInputQueue().add(curBuf);
 					// First ✓
-					System.out.print(".");
 					
 					cl.getKeyboardSender().unwaitThread();
 				}

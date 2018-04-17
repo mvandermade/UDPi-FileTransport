@@ -16,6 +16,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.IntStream;
 
 import shared.ByteCalculator;
 import shared.DataStor;
@@ -40,7 +41,7 @@ public class TransferInfoOutFile {
 		return chunckTotal;
 	}
 
-	int[] chuncks; // Contains a number which represents transmission count
+	int[] chunckTransmissionCountArray; // Contains a number which represents transmission count
 	long timeStamp;
 	private byte sessionId;
 	
@@ -61,7 +62,7 @@ public class TransferInfoOutFile {
 		// Ceil, the last chunck needs to be padded
 		this.chunckTotal = (int) Math.ceil((double)fileSizeBytes / (double)chunckSize);
 		// Initialises to 0
-		chuncks = new int[chunckTotal];
+		this.chunckTransmissionCountArray = new int[chunckTotal];
 		// Calculate number of chuncksize
 		this.timeStamp = ZonedDateTime.now().toInstant().toEpochMilli();
 		// To be filled by Receiver
@@ -108,7 +109,7 @@ public class TransferInfoOutFile {
 	}
 		
 	public void uploadEnqueueChunckId(int chunckId) {
-		chuncks[chunckId] = chuncks[chunckId]+1;
+		chunckTransmissionCountArray[chunckId] = chunckTransmissionCountArray[chunckId]+1;
 		uploadSlotChuncks.add(chunckId);
 		dataStor.getUploadSlot().unwaitThread();
 		// These packets should be picked up automatically
@@ -157,6 +158,13 @@ public class TransferInfoOutFile {
 		
 		dataStor.getInSktUDP().sendChunckFromDisk(this.getSessionId(), ByteCalculator.intToLeByteArray(chunckId), grabChunckFromDisk(chunckId),
 				this.getReqAddress(), this.getReqPort());
+	}
+
+
+	public String getPacketlossInfo() {
+		int response = IntStream.of(chunckTransmissionCountArray).sum()-chunckTransmissionCountArray.length;
+		
+		return "Server retransmissions:  " + response;
 	}
 
 }

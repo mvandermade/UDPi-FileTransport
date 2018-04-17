@@ -21,7 +21,6 @@ public class InboundClientUtil implements InboundDatagramUtil {
 			throws UnknownHostException, IOException, StringIndexOutOfBoundsException {
 		// TODO Auto-generated method stub
 		// TODO Auto-generated method stub
-		System.out.println(">");
 		
 		//+1 remove the sorting byte
 		String stringIn = new String(datagramPacket.getData(), datagramPacket.getOffset()+1, datagramPacket.getLength()-1);
@@ -34,11 +33,11 @@ public class InboundClientUtil implements InboundDatagramUtil {
 							)
 					) {
 				// Remove ; from server
-				System.out.println(stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length()));
+				//stringIn = stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length());
 				
 				
 				// 10, including the OK
-				if (stringIn.length() >= 10 && stringIn.substring(0, 9).equals("download;")) {
+				if (stringIn.length() >= 20 && stringIn.substring(0, 8).equals("download")) {
 					// Check if got OK
 					String answ = stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length());
 					if (answ.substring(0,2).equals("OK")) {
@@ -60,39 +59,47 @@ public class InboundClientUtil implements InboundDatagramUtil {
 							cl.getDataStor().getScrapeAgent().unwaitThread();
 							
 						}
+					} else {
+						System.out.println(answ);
 					}
 				
 				
 				}
 
 			} else if (stringIn.length() >= 6 && stringIn.substring(0, 6).equals("finish")) {
-				System.out.println(stringIn+";i observed packet loss from my side : requests RxTx");
 				if (stringIn.length() > 7) {
-					// Ommitting the space
-					int sessionIdin = Integer.parseInt(stringIn.substring(7, stringIn.length()));
-					//byte sessionIdin = (byte) stringIn.charAt(8);
-					
-					// Remove from queue
-					cl.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
-						if (sessionIdin==c.getSessionId() &&
-								c.getReqAddress().equals(datagramPacket.getAddress()) &&
-										c.getReqPort() == datagramPacket.getPort()) {
-							System.out.println("uploadremoved from queue");
-							return true;
-							
-						} else {
-							return false;
-						}
-					});
+					if (stringIn.split(";").length == 2) {
+						// Ommitting the space
+						String stringFinish = stringIn.split(";")[0];
+						int sessionIdin = Integer.parseInt(stringFinish.substring(7, stringFinish.length()));
+						//byte sessionIdin = (byte) stringIn.charAt(8);
+						System.out.println(stringIn.split(";")[1]);
+						// Remove from queue
+						cl.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
+							if (sessionIdin==c.getSessionId() &&
+									c.getReqAddress().equals(datagramPacket.getAddress()) &&
+											c.getReqPort() == datagramPacket.getPort()) {
+								System.out.println("uploadremoved from queue");
+								return true;
+								
+							} else {
+								return false;
+							}
+						});
+					}
 				}
 			} else {
 				// INFO message or something?
-				System.out.println(">server notifies:\n\t\t\t\t"+stringIn);
+				if (stringIn.split(";").length == 2) {
+					System.out.println("\t\t"+stringIn.split(";")[1]);
+				} else {
+					System.out.println("\t\t"+stringIn);
+				}
 			}
 		} catch (StringIndexOutOfBoundsException e) {
 			// This may occur when the server randomly 
 			//e.printStackTrace();
-			System.out.println(">(stringindex out of bounds, plain:) server notifies:\n\t\t\t\t"+stringIn);
+			System.out.println("\t\t\t\t"+stringIn);
 		}
 		
 		

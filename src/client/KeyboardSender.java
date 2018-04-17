@@ -43,6 +43,7 @@ public class KeyboardSender implements Runnable {
 				} else {
 					
 					done = true;
+					
 				}
 			}
 			
@@ -53,7 +54,7 @@ public class KeyboardSender implements Runnable {
 
 	private void handleKeyboardInput(String keyboardInput) throws UnknownHostException, IOException {
 		// TODO Auto-generated method stub
-		System.out.print(".");
+		System.out.println("(c)->{cmd sent.}");
 		cl.getDataStor().getInSktUDP().sendStr(keyboardInput, cl.getServerAddr(), cl.getServerPort());
 		
 	}
