@@ -6,8 +6,11 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import shared.ByteCalculator;
+import shared.DataStor;
 
 public class InSktUDP {
 	
@@ -15,10 +18,12 @@ public class InSktUDP {
 	int portIn;
 	DatagramSocket socket;
 	int bufSize;
+	private DataStor dataStor;
 	
-	public InSktUDP(int bufSize, int portIn) throws IOException {
+	public InSktUDP(DataStor dataStor, int bufSize, int portIn) throws IOException {
 		this.bufSize=bufSize;
 		this.portIn = portIn;
+		this.dataStor = dataStor;
 		socket = new DatagramSocket(portIn);
 		
 		// Already initialized
@@ -63,9 +68,10 @@ public class InSktUDP {
 		buf[1] = sessId;
 		// Convert int to little endian
 		byte[] chunckId = ByteCalculator.intToLeByteArray(chunckIdInt);
+		//System.out.println(chunckId);
 		// Fill the header with the bytes.
 		buf[2] = chunckId[0]; buf[3] = chunckId[1]; buf[4] = chunckId[2]; buf[5] = chunckId[3];
-		
+		//System.out.println("sent:"+chunckIdInt+"for: "+sessId);
 		sendByte(buf, address, portDest);
 		
 	}
@@ -123,17 +129,30 @@ public class InSktUDP {
 		buf[0] = 0x1C;
 		buf[1] = sessionId;
 		// Convert int to little endian
-		// Fill the header with the bytes.
-		buf[2] = chunckId[0]; buf[3] = chunckId[1]; buf[4] = chunckId[2]; buf[5] = chunckId[3];
-		System.out.println(Arrays.toString(grabChunckFromDisk));
+		// Fill the header with the bytes.'
+		for (int i = 0; i < chunckId.length; i++) {
+			buf [i+dataStor.getPacketPointerChunckId()] = chunckId[i];
+		}
+		
+		//System.out.println("Sent: Chunck "+Arrays.toString(chunckId));
+		
+		// CRC
+		Checksum checksum = new CRC32();
+		checksum.update(grabChunckFromDisk, 0, grabChunckFromDisk.length);
+		byte[] checksumBytes = ByteCalculator.longToBytes(checksum.getValue());
+		for (int i = 0; i < checksumBytes.length; i++) {
+			buf [i+dataStor.getPacketPointerCRC()] = checksumBytes[i];
+		}
+		
+		
 		// Next fill out the buffer with the chunck
 		for (int i = 0; i < grabChunckFromDisk.length; i++) {
-			  buf[i+6] = grabChunckFromDisk[i];
-			}
+			buf[i+dataStor.getPacketPointerContents()] = grabChunckFromDisk[i];
+		}
+		
 		
 		// And send it
 		sendByte(buf, reqAddress, reqPort);
-		
 		
 	}
 	

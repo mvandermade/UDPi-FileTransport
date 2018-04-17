@@ -3,13 +3,13 @@ package client;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
-public class KeyboardSenderThread implements Runnable {
+public class KeyboardSender implements Runnable {
 	private CMain cl;
-	// Not relevant unit, it is interrupted
-	private int pollQueueTime = 9000;
+	
+	private boolean waitState = true;
   
     // standard constructors
-    public KeyboardSenderThread (CMain cMain) {
+    public KeyboardSender (CMain cMain) {
     	this.cl = cMain;
     }
   
@@ -18,12 +18,9 @@ public class KeyboardSenderThread implements Runnable {
     	while (true) {
 			
 			// Check for messages
-			try {
-				Thread.sleep(pollQueueTime);
-			} catch (InterruptedException e) {
-				//e.printStackTrace()		
-				// AWAKE!!
-			}
+			waitThread();
+			waitForSignal();
+			
 			boolean done = false;
 			while (!done) {
 
@@ -52,8 +49,6 @@ public class KeyboardSenderThread implements Runnable {
 			
 		} // end while true server loop
 
-        
-
     }
 
 	private void handleKeyboardInput(String keyboardInput) throws UnknownHostException, IOException {
@@ -61,5 +56,34 @@ public class KeyboardSenderThread implements Runnable {
 		System.out.print(".");
 		cl.getDataStor().getInSktUDP().sendStr(keyboardInput, cl.getServerAddr(), cl.getServerPort());
 		
+	}
+	
+	public void waitForSignal() {
+		synchronized(this) {
+			while(waitState) {
+				try {
+					wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		
+	}
+	
+	public void unwaitThread() {
+		synchronized(this) {
+			if (this.waitState == true) {
+				this.waitState = false;
+				notifyAll();
+			}
+		}
+	}
+	
+	public void waitThread() {
+		synchronized(this) {
+			this.waitState = true;
+		}
 	}
 }

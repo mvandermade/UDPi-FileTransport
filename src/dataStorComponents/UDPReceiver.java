@@ -5,12 +5,12 @@ import java.io.IOException;
 import shared.DataStor;
 import srv.SMain;
 
-public class Receiver implements Runnable {
-	private DataStor srv;
+public class UDPReceiver implements Runnable {
+	private DataStor dataStor;
   
-    public Receiver(DataStor dataStor) {
+    public UDPReceiver(DataStor dataStor) {
     	// Inherit all functionallity from main
-    	this.srv = dataStor;
+    	this.dataStor = dataStor;
 	}
 
 	public void run() {
@@ -18,9 +18,11 @@ public class Receiver implements Runnable {
     	while (true) {
 	        try {
 	        	// Grab a datagram, put it in the queue
-				srv.getInboundQueue().add(srv.getInSktUDP().receive());
-			    // wake the watchdog
-				srv.getWatchdogThread().interrupt();
+				dataStor.getInboundQueue().add(dataStor.getInSktUDP().receive());
+			    //System.out.println("udp waking watchdog...");
+			    
+				// wake the watchdog
+				dataStor.getWatchdog().unwaitThread();
 
 			} catch (IOException e) {
 				e.printStackTrace();

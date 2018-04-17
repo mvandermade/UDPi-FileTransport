@@ -7,24 +7,23 @@ import java.util.Iterator;
 
 import shared.DataStor;
 
-public class UploadSlotThread implements Runnable {
+public class UploadSlot implements Runnable {
 	private DataStor dataStor;
 	// Awake it, maybe it benefits speed if a thread was active at time of interrupt
-	private int pollQueueTime = 9000;
+	
+	private boolean waitState = true;
   
     // standard constructors
-    public UploadSlotThread (DataStor dataStor) {
+    public UploadSlot (DataStor dataStor) {
     	this.dataStor = dataStor;
     }
   
     public void run() {
     	
     	while (true) {
-			try {
-				Thread.sleep(pollQueueTime);
-			} catch (InterruptedException e) {
-				// AWAKE!!
-			}
+			waitThread();
+			waitForSignal();
+			
 			// Check for messages
 			//System.out.print("poll");
 			// Concurrent, so it might be that the queues fill after iterator
@@ -42,9 +41,9 @@ public class UploadSlotThread implements Runnable {
 					TransferInfoOutFile current = iter.next();
 					Integer chunckId = current.getUploadSlotChuncks().poll();
 					if (null!=chunckId) {
-						System.out.println("REQUEST FOR PKT:"+chunckId);
+						//System.out.println("REQUEST FOR PKT:"+chunckId);
 						current.uploadChunckDatagram(chunckId);
-						System.out.println("SENT FOR PKT:"+chunckId);
+						//System.out.println("SENT FOR PKT:"+chunckId);
 						// Send back FS
 						somePacketsInQueueLeft = true;
 					}
@@ -59,4 +58,35 @@ public class UploadSlotThread implements Runnable {
         
 
     }
+    
+	public void waitForSignal() {
+		System.out.println("uploader waits");
+		synchronized(this) {
+			while(waitState) {
+				try {
+					wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		System.out.println("uploader active");
+		
+	}
+	
+	public void unwaitThread() {
+		synchronized(this) {
+			if (this.waitState == true) {
+				this.waitState = false;
+				notifyAll();
+			}
+		}
+	}
+	
+	public void waitThread() {
+		synchronized(this) {
+			this.waitState = true;
+		}
+	}
 }

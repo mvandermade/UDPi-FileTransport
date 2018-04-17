@@ -8,26 +8,25 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import shared.ByteCalculator;
 import shared.DataStor;
 
 public class Watchdog implements Runnable {
 	
-	int pollQueueTime = 9000;
 	private DataStor dataStor;
+	
+	private boolean waitState = true;
 	
 	public Watchdog(DataStor dataStor) {
 		this.dataStor = dataStor;
 	}
+	
+	
 
 	public void run() {
-	
 		while (true) {
-			try {
-				Thread.sleep(pollQueueTime);
-			} catch (InterruptedException e) {
-				//e.printStackTrace()		
-				// AWAKE!!
-			}
+			waitThread();
+			waitForSignal();
 			
 			// Check for messages, i'm awake
 			boolean done = false;
@@ -68,19 +67,25 @@ public class Watchdog implements Runnable {
 		switch (firstByte) {
 			// STX
 			case(0x02): {
+				System.out.println("TEXT IN");
 				dataStor.getInboundDatagramUtil().handleTextDatagram(datagramPacket);
+				System.out.println(">>TEXT SENT");
 				break;
 			// FS 0x1C = inbound data from uploadslot. FS<sessionId<4byte chunck int><data>
 			} case (0x1C): {
 				handleBufInDownloadSlotDatagram(datagramPacket);
+				//System.out.println("FS");
 				break;
 			// BELL 0x07 = response of client to: OK, initialises uploadslot
 			} case (0x07): {
+				System.out.println("BELL IN");
 				handleRequestWholeFileDatagram(datagramPacket);
+				System.out.println(">>BELL SENT");
 				break;
 				// Form feed, it is a request to an uploadslot to send an FS.
 			} case (0x0C):{
 				handleUploadslotRequest(datagramPacket);
+				//System.out.println("request for 1 pkt");
 				break;
 			} default: {
 				System.out.println("bark");
@@ -95,9 +100,8 @@ public class Watchdog implements Runnable {
 	}
 
 	public void handleBufInDownloadSlotDatagram(DatagramPacket datagramPacket) {
-		System.out.println(Arrays.toString(datagramPacket.getData()));
-		//System.out.println("got FS"+datagramPacket.getData()[1] +"chunck:"+shared.ByteCalculator.byteArrayToLeInt(Arrays.copyOfRange(datagramPacket.getData(), 2, 5)));
-
+		dataStor.getTransferDB().handleInboundDownloadChunck(datagramPacket);
+		
 	}
 
 	public void handleRequestWholeFileDatagram(DatagramPacket datagramPacket) {
@@ -106,5 +110,37 @@ public class Watchdog implements Runnable {
 		dataStor.getTransferDB().enqueueWholeFile(datagramPacket);
 		
 	}
-
+	
+	public void waitForSignal() {
+		//System.out.println("watchdog wait");
+		synchronized(this) {
+			while(waitState) {
+				try {
+					wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		//System.out.println("watchdog awake");
+		
+	}
+	
+	public void unwaitThread() {
+		synchronized(this) {
+			if (this.waitState == true) {
+				this.waitState = false;
+				notifyAll();
+			}
+		}
+		
+	}
+	
+	public void waitThread() {
+		synchronized(this) {
+			this.waitState = true;
+		}
+	}
+	
 }

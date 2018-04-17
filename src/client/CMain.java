@@ -10,25 +10,41 @@ import shared.DataStor;
 public class CMain {
 	
 	private DataStor dataStor;
-	private Thread sender;
+	private Thread senderThread;
 	private Thread keyboardInputListnerThread;
 	private String mostRecentKeyboardInput;
 	private InetAddress serverAddr = InetAddress.getByName("localhost");
-	private int serverPort = 4445;
+	private int serverPort;
 	
 	private final Queue<String> keyboardInputQueue = new ConcurrentLinkedQueue<>();
+	private KeyBoardInputListner keyboardInputListner;
+	private KeyboardSender keyboardSender;
+
+	public KeyboardSender getKeyboardSender() {
+		return keyboardSender;
+	}
+
+	public KeyBoardInputListner getKeyboardInputListner() {
+		return keyboardInputListner;
+	}
 
 	public CMain() throws IOException {
 		// dataStor handles all shared components
 		// As well as booting threads, so reference is easier.
-		dataStor = new DataStor(4446, "clientroot", new InboundClientUtil(this));
+		this.serverPort = 4445;
+		dataStor = new DataStor(4448, "clientroot", new InboundClientUtil(this));
 	    
-	    sender = new Thread(new KeyboardSenderThread(this));
-	    sender.start();
+		this.keyboardSender = new KeyboardSender(this);
+	    senderThread = new Thread(keyboardSender);
+	    senderThread.start();
+	    
 	    System.out.println("booted keyBoardsender");
 	    // Interrupted also after watchdog finishes
-	    keyboardInputListnerThread = new Thread(new KeyBoardInputListnerThread(this));
+	    this.keyboardInputListner = new KeyBoardInputListner(this);
+	    this.keyboardInputListnerThread = new Thread(keyboardInputListner);
 	    keyboardInputListnerThread.start();
+	    
+	    
 	    System.out.println("booted keyboard listner");
 	    
 		// Start Watchdog that will process the inboundQueue
@@ -40,13 +56,14 @@ public class CMain {
 	    dataStor.getUDPreceiver().start();
 	    System.out.println("Client recv booted");
 	    
-	    // Activate
-	    this.getKeyboardInputListnerThread().interrupt();
+	    dataStor.getScrapeAgentThread().start();
+	    System.out.println("Scrape Agent booted");
+	    
 	    
 	}
 
-	public Thread getKeyboardSender() {
-		return sender;
+	public Thread getKeyboardSenderThread() {
+		return senderThread;
 	}
 
 	public String getMostRecentKeyboardInput() {

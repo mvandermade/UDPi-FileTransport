@@ -19,6 +19,9 @@ public class FileMan {
 	public FileMan(String path) {
 		
 		this.folder = new File(path);
+		if (!folder.exists()) {
+			System.out.println("Path not found"+ folder.getAbsolutePath());
+		}
 		this.path = path;
 		
 	}
@@ -30,7 +33,7 @@ public class FileMan {
 		
 	    for (int i = 0; i < listOfFiles.length; i++) {
 	      if (listOfFiles[i].isFile()) {
-	    	  response += "\n" + listOfFiles[i].getName()+"\t\t"+sizeHumanReadableStr(listOfFiles[i].length());
+	    	  response += "\n" + listOfFiles[i].getName()+"\t\t\t\t"+sizeHumanReadableStr(listOfFiles[i].length());
 	    	  
 	      }
 	    }
@@ -110,7 +113,7 @@ public class FileMan {
 		FileOutputStream s;
 		try {
 			s = new FileOutputStream(this.path+"/"+filename);
-
+			System.out.println("file:"+filename+" created");
 			byte[] buf = new byte[fileSizeBytes];
 			s.write(buf);
 			s.flush();

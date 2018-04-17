@@ -54,6 +54,7 @@ public class InboundClientUtil implements InboundDatagramUtil {
 							// The server might in the future be programmed to start broadcasting ...
 							System.out.println("Sending BELL");
 							cl.getDataStor().getInSktUDP().sendBellReplyTo((byte)integerSessId, datagramPacket);
+							cl.getDataStor().getScrapeAgent().unwaitThread();
 							
 						}
 					}
@@ -72,7 +73,6 @@ public class InboundClientUtil implements InboundDatagramUtil {
 		}
 		
 		
-		cl.getKeyboardInputListnerThread().interrupt();
 	}
 
 }

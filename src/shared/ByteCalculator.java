@@ -20,29 +20,33 @@ public class ByteCalculator {
 	    return bb.getInt();
 	}
 	
-	public static byte[] byteBufferToArray(int bufSize, ByteBuffer buffer) {
-		// Create a byte array
-		byte[] bytes = new byte[bufSize];
+	public static byte[] byteBufferToArray(ByteBuffer buffer) {
 
-		// Wrap a byte array into a buffer
-		ByteBuffer buf = ByteBuffer.wrap(bytes);
-
-		// Retrieve bytes between the position and limit
-		// (see Putting Bytes into a ByteBuffer)
-		bytes = new byte[buf.remaining()];
-
-		// transfer bytes from this buffer into the given destination array
-		buf.get(bytes, 0, bytes.length);
-
-		// Retrieve all bytes in the buffer
-		buf.clear();
-		bytes = new byte[buf.capacity()];
-
-		// transfer bytes from this buffer into the given destination array
-		buf.get(bytes, 0, bytes.length);
+		byte[] bytes;
+		if(buffer.hasArray()) {
+		    bytes = buffer.array();
+		} else {
+		    bytes = new byte[buffer.remaining()];
+		    buffer.get(bytes);
+		}
 		
 		return bytes;
 		
+	}
+	
+	public static byte[] longToBytes(long crcLong) {
+	    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+	    buffer.putLong(crcLong);
+	    
+	    return buffer.array();
+	}
+
+	public static long bytesToLong(byte[] crcBytes) {
+	    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+	    
+	    buffer.put(crcBytes);
+	    buffer.flip();//need flip 
+	    return buffer.getLong();
 	}
 
 }

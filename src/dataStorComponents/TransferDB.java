@@ -24,6 +24,10 @@ public class TransferDB {
 	private final Queue<TransferInfoInFile> downloadSlots;
 
 	
+	public Queue<TransferInfoInFile> getDownloadSlots() {
+		return downloadSlots;
+	}
+
 	public TransferDB(DataStor dataStor) {
 		this.dataStor = dataStor;
 		// awaiting start transfer (bell) symbol queue.
@@ -91,46 +95,73 @@ public class TransferDB {
 
 		// If the packet was enqueued, remove it from the awaitingStartTransferList
 		if (null!=fileToEnqueue) {
-			// Clean the concurrentlyLinkedList of the found item.
-			boolean done = false;
-			while (!done) {
-				TransferInfoOutFile polledWaitingPacket = awaitingStartTransferList.poll();
-
-				if (polledWaitingPacket != null) {
-					// Compare it to the fileToEnqueue
-					if(fileToEnqueue.getSessionId()!=polledWaitingPacket.getSessionId()) {
-						// Put it back
-						awaitingStartTransferList.add(polledWaitingPacket);
-					}
-				} else {
-					done = true;
-				}
-
-			}
-
-
-
-			// Put it in the active queue
-			uploadSlots.add(fileToEnqueue);
-			// Interrupt uploader
-
-			try {
-				dataStor.getInSktUDP().sendStrReplyTo("Uploadslot emitting"+fileToEnqueue.getChunckTotal(), datagramPacket);
-				for (int i = 0; i < fileToEnqueue.getChunckTotal(); i++) {
-					fileToEnqueue.uploadEnqueueChunck(i);
-				}
-				dataStor.getUploadSlotThread().interrupt();
+			
+			
+			
+			if (countUploadSlots() > 50) {
+				System.out.println("SERVER BUSY, request BELL again!");
 				
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				
+			} else {
+				System.out.println("allocate uploadslot");
+				allocateUploadslot(datagramPacket, fileToEnqueue);
 
+			}
 		}
 
+	}
+
+	public void allocateUploadslot(DatagramPacket datagramPacket, TransferInfoOutFile fileToEnqueue) {
+		// Clean the concurrentlyLinkedList of the found item.
+		boolean canStop = false;
+		
+		while (!canStop) {
+			// Iterate over upload slots
+			Iterator<TransferInfoOutFile> iter = awaitingStartTransferList.iterator();
+			// Check if the session id and datagram port and IP are enlisted.
+			// The iterator makes sure FUP is achieved
+			
+			// Prove the truth, or stop looping
+			canStop = false;
+			while (iter.hasNext()) {
+				TransferInfoOutFile current = iter.next();
+				
+				//System.out.println("Port: "+current.getReqPort()+"__"+datagramPacket.getPort());
+				//System.out.println("Session: "+current.getSessionId()+"__"+datagramPacket.getData()[1]);
+				
+				if (current.getReqAddress().equals(datagramPacket.getAddress())
+						&& current.getReqPort() == datagramPacket.getPort()
+						&& current.getSessionId() == datagramPacket.getData()[1]) {
+					// Add the file to the uploadslot
+					uploadSlots.add(fileToEnqueue);
+					System.out.println("uploadslots.add true");
+					canStop = true;
+				}
+			}
+		}
+		
+		//TODO HERE SHOULD BE FUNCTION THAT REMOVES THE SESSION FROM LIST
+
+		//System.out.println("uploadslots.add");
+		// Put it in the active queue
+		
+		// Interrupt uploader
+
+		try {
+			//System.out.println("emitting");
+			dataStor.getInSktUDP().sendStrReplyTo("Uploadslot emitting"+fileToEnqueue.getChunckTotal(), datagramPacket);
+			for (int i = 0; i < fileToEnqueue.getChunckTotal(); i++) {
+				fileToEnqueue.uploadEnqueueChunckId(i);
+			}
+			dataStor.getUploadSlot().unwaitThread();
+			
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public byte getSessionCount() {
@@ -145,6 +176,24 @@ public class TransferDB {
 		// TODO Auto-generated method stub
 		downloadSlots.add(transferInfoInFile);
 		
+	}
+	
+	public void handleInboundDownloadChunck(DatagramPacket datagramPacket) {
+		
+		Iterator<TransferInfoInFile> iter = dataStor.getTransferDB().getDownloadSlots().iterator();
+		// Check if the session id and datagram port and IP are enlisted.
+		// The iterator makes sure FUP is achieved
+		while (iter.hasNext()) {
+			TransferInfoInFile current = iter.next();		
+			
+			if (current.getReqAddress().equals(datagramPacket.getAddress())
+					&& current.getReqPort() == datagramPacket.getPort()
+					&& current.getSessionId() == datagramPacket.getData()[1]) {
+				// Add the chunck, it's okay
+				current.writeDatagramToDisk(datagramPacket);
+				break;
+			}
+		}
 	}
 
 	public void handleUploadRequest(DatagramPacket datagramPacket) {
@@ -164,5 +213,22 @@ public class TransferDB {
 			}
 		}
 	}
+	
+	
+	public int countUploadSlots() {
+		Iterator<TransferInfoOutFile> iter = this.getUploadSlots().iterator();
+		// Check if the session id and datagram port and IP are enlisted.
+		// The iterator makes sure FUP is achieved
+		int count = 0;
+		
+		while (iter.hasNext()) {
+			iter.next();		
+			count++;
+			
+		}
+		return count;
+	}
+	
+	
 
 }

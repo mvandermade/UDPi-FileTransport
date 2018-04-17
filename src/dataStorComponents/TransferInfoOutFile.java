@@ -68,7 +68,6 @@ public class TransferInfoOutFile {
 		this.uploadSlotChuncks = new ConcurrentLinkedQueue<>();
 		
 		// assign a disk access hook
-		System.out.println(file.getPath());
 		this.aFile = new RandomAccessFile(file.getPath(), "r");
 		this.readChannel = aFile.getChannel();
 		
@@ -104,32 +103,40 @@ public class TransferInfoOutFile {
 
 	public void addUploadRequestChunckFromDatagramPacket(DatagramPacket datagramPacket) {
 		
-		uploadEnqueueChunck(shared.ByteCalculator.byteArrayToLeInt(Arrays.copyOfRange(datagramPacket.getData(), 2, 5)));
+		uploadEnqueueChunckId(shared.ByteCalculator.byteArrayToLeInt(Arrays.copyOfRange(datagramPacket.getData(), dataStor.getPacketPointerChunckId(), dataStor.getPacketPointerCRC())));
 		
 	}
 		
-	public void uploadEnqueueChunck(int chunckId) {
+	public void uploadEnqueueChunckId(int chunckId) {
 		chuncks[chunckId] = chuncks[chunckId]+1;
 		uploadSlotChuncks.add(chunckId);
+		dataStor.getUploadSlot().unwaitThread();
 		// These packets should be picked up automatically
 	}
 	
 	public byte[] grabChunckFromDisk(int chunckId) {
 		ByteBuffer buf = ByteBuffer.allocate(chunckSize);
 		
+
+		// Output
+		byte[] byteArray = null;
+		
 		try {
 			readChannel.position(chunckId*chunckSize);
 			int bytesRead = readChannel.read(buf);
-			if (bytesRead != chunckSize) {
-				System.out.println(file.getName()+" diskerror! read (just) "+bytesRead+" of "+chunckSize);
-			}
+			// Assume the buffer is filled up (only the last chunck isn't the same size, potentially)
+			byteArray = Arrays.copyOfRange(ByteCalculator.byteBufferToArray(buf), 0, bytesRead);
+
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		byte[] byteArray = ByteCalculator.byteBufferToArray(chunckSize, buf);
+		/// TEST
 		
+		
+				
 		return byteArray;
 		
 	}
@@ -147,7 +154,6 @@ public class TransferInfoOutFile {
 
 	public void uploadChunckDatagram(Integer chunckId) {
 		// TODO Auto-generated method stub
-		
 		
 		dataStor.getInSktUDP().sendChunckFromDisk(this.getSessionId(), ByteCalculator.intToLeByteArray(chunckId), grabChunckFromDisk(chunckId),
 				this.getReqAddress(), this.getReqPort());

@@ -9,28 +9,38 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import dataStorComponents.FileMan;
 import dataStorComponents.InSktUDP;
 import dataStorComponents.InboundDatagramUtil;
-import dataStorComponents.Receiver;
+import dataStorComponents.ScrapeAgent;
+import dataStorComponents.UDPReceiver;
 import dataStorComponents.TransferDB;
-import dataStorComponents.UploadSlotThread;
+import dataStorComponents.UploadSlot;
 import dataStorComponents.Watchdog;
 import srv.InboundServerUtil;
 
 public class DataStor {
 	private String basePath;
 	private FileMan fileMan;
-	private int datagramSize = 256;
-	private int headerSize = 6; // Header is TYPE|4-byte-chunckID|1-byte-session|<>
+	private int datagramSize = 1000;
+	private int headerSize = 14; // also set as beginning of the content block. currently: <1cmdtype><1sessionid><4byte chunckId><8byte CR32>
 	private int chuncksize;
 	private TransferDB transferDB;
-	private Thread watchdog; 
+	private Thread watchdogThread; 
 	private InSktUDP inSktUDP = null;
-	private Thread UDPreceiver;
+	private Thread UDPreceiverThread;
 	private final Queue<DatagramPacket> inboundQueue = new ConcurrentLinkedQueue<>();
 	private InboundDatagramUtil inboundDatagramUtil;
 	private int listnerPort;
 	private Thread uploadSlotThread;
+	private Boolean[] sleeperList;
+	private Watchdog watchdog;
+	private UploadSlot uploadSlot;
+	private ScrapeAgent scrapeAgent;
+	private Thread scrapeAgentThread;
 
 	
+	public UploadSlot getUploadSlot() {
+		return uploadSlot;
+	}
+
 	public DataStor(int listnerPort, String relativePath, InboundDatagramUtil inboundDatagramUtil) {
 		this.listnerPort = listnerPort;
 		this.setInboundDatagramUtil(inboundDatagramUtil);
@@ -40,22 +50,30 @@ public class DataStor {
 		
 		// TransferDB for keeping the transfers
 		this.setTransferDB(new TransferDB(this));
-		// chucksize is reduced by 9 due to header
+		// chucksize is reduced by 6 due to header
 		setChuncksize(datagramSize - headerSize);
 		
-	    setWatchdog(new Thread(new Watchdog(this)));
+		this.watchdog = new Watchdog(this);
+	    setWatchdogThread(new Thread(watchdog));
 	    
-	    this.setUploadSlotThread(new Thread(new UploadSlotThread(this)));
+	    this.uploadSlot = new UploadSlot(this);
+	    this.setUploadSlotThread(new Thread(uploadSlot));
 	    
+	    this.setScrapeAgent(new ScrapeAgent(this));
+	    this.setScrapeAgentThread(new Thread(scrapeAgent));
 	    
 	    try {
-			this.setInSktUDP(new InSktUDP(datagramSize, listnerPort));
+			this.setInSktUDP(new InSktUDP(this, datagramSize, listnerPort));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	    
-	    setUDPreceiver(new Thread(new Receiver(this)));
+	    setUDPreceiver(new Thread(new UDPReceiver(this)));
+	}
+
+	public Watchdog getWatchdog() {
+		return watchdog;
 	}
 
 	public int getChuncksize() {
@@ -75,11 +93,11 @@ public class DataStor {
 	}
 
 	public Thread getWatchdogThread() {
-		return watchdog;
+		return watchdogThread;
 	}
 
-	public void setWatchdog(Thread watchdog) {
-		this.watchdog = watchdog;
+	public void setWatchdogThread(Thread watchdog) {
+		this.watchdogThread = watchdog;
 	}
 
 	public InSktUDP getInSktUDP() {
@@ -91,11 +109,11 @@ public class DataStor {
 	}
 
 	public Thread getUDPreceiver() {
-		return UDPreceiver;
+		return UDPreceiverThread;
 	}
 
 	public void setUDPreceiver(Thread uDPreceiver) {
-		UDPreceiver = uDPreceiver;
+		UDPreceiverThread = uDPreceiver;
 	}
 
 	public FileMan getFileMan() {
@@ -132,6 +150,37 @@ public class DataStor {
 
 	public void setUploadSlotThread(Thread uploadSlotThread) {
 		this.uploadSlotThread = uploadSlotThread;
+	}
+
+	public int getPacketPointerContents() {
+		// TODO Auto-generated method stub
+		return this.headerSize;
+	}
+	
+	public int getPacketPointerCRC() {
+		// TODO Auto-generated method stub
+		return this.headerSize-8;
+	}
+
+	public int getPacketPointerChunckId() {
+		// TODO Auto-generated method stub
+		return this.headerSize-8-4;
+	}
+
+	public Thread getScrapeAgentThread() {
+		return scrapeAgentThread;
+	}
+
+	public void setScrapeAgentThread(Thread scrapeAgentThread) {
+		this.scrapeAgentThread = scrapeAgentThread;
+	}
+
+	public ScrapeAgent getScrapeAgent() {
+		return scrapeAgent;
+	}
+
+	public void setScrapeAgent(ScrapeAgent scrapeAgent) {
+		this.scrapeAgent = scrapeAgent;
 	}
 
 }

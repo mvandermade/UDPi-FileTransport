@@ -7,10 +7,10 @@ import java.net.Socket;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import client.KeyboardSenderThread;
+import client.KeyboardSender;
 import dataStorComponents.FileMan;
 import dataStorComponents.InSktUDP;
-import dataStorComponents.Receiver;
+import dataStorComponents.UDPReceiver;
 import dataStorComponents.TransferDB;
 import shared.DataStor;
 
@@ -22,7 +22,7 @@ public class SMain {
 		
 		// dataStor handles all shared components
 		// As well as booting threads, so reference is easier.
-		setDataStor(new DataStor(4445, "fileroot", new InboundServerUtil(this)));
+		setDataStor(new DataStor(4445, "home/pi/fileroot", new InboundServerUtil(this)));
 		
 		// Start Watchdog that will process the inboundQueue
 		// Watchdog can send messages

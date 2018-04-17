@@ -4,10 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-public class KeyBoardInputListnerThread implements Runnable {
+public class KeyBoardInputListner implements Runnable {
 	private CMain cl;
+	
+	private boolean waitState = true;
   
-    public KeyBoardInputListnerThread(CMain cMain) {
+    public KeyBoardInputListner(CMain cMain) {
     	// Inherit all functionallity from main
     	this.cl = cMain;
 	}
@@ -23,24 +25,21 @@ public class KeyBoardInputListnerThread implements Runnable {
 	private void handleTUI(BufferedReader bufferedReaderTextInput) {
 		while (true) {
 			try {
-				Thread.sleep(102400);
-			} catch (InterruptedException e) {
-				//e.printStackTrace()		
-				// AWAKE!!
-			}
-			try {
 				System.out.print("\ntype command or \"help\">");
 				// Each line is seen as a command, and put into the queue
 				cl.getKeyboardInputQueue().add(bufferedReaderTextInput.readLine());
 				// First ✓
 				System.out.print(".");
 				
-				cl.getKeyboardSender().interrupt();
+				cl.getKeyboardSender().unwaitThread();
 				
 			} catch (IOException e) {
 				// ignore
 				//e.printStackTrace();
+			} catch (NullPointerException e) {
+				//
 			}
 		}
 	}
+	
 }
