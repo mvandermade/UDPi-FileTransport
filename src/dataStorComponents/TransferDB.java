@@ -6,8 +6,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -150,7 +148,7 @@ public class TransferDB {
 
 		try {
 			//System.out.println("emitting");
-			dataStor.getInSktUDP().sendStrReplyTo("Uploadslot emitting"+fileToEnqueue.getChunckTotal(), datagramPacket);
+			dataStor.getInSktUDP().sendStrReplyTo("Request OK! Sending #"+fileToEnqueue.getChunckTotal()+" UDP packets your way", datagramPacket);
 			for (int i = 0; i < fileToEnqueue.getChunckTotal(); i++) {
 				fileToEnqueue.uploadEnqueueChunckId(i);
 			}
@@ -181,18 +179,39 @@ public class TransferDB {
 	
 	public void handleInboundDownloadChunck(DatagramPacket datagramPacket) {
 		
+		
 		Iterator<TransferInfoInFile> iter = dataStor.getTransferDB().getDownloadSlots().iterator();
 		// Check if the session id and datagram port and IP are enlisted.
 		// The iterator makes sure FUP is achieved
+		boolean iteratorActive = false;
+		boolean isInQueue = false;
 		while (iter.hasNext()) {
-			TransferInfoInFile current = iter.next();		
+			iteratorActive = true;
+			TransferInfoInFile current = iter.next();
+			//System.out.println(datagramPacket.getData()[1]);
+			//System.out.println(current.getSessionId());
 			
 			if (current.getReqAddress().equals(datagramPacket.getAddress())
 					&& current.getReqPort() == datagramPacket.getPort()
 					&& current.getSessionId() == datagramPacket.getData()[1]) {
 				// Add the chunck, it's okay
+				
 				current.writeDatagramToDisk(datagramPacket);
+				isInQueue = true;
 				break;
+			}
+		}
+		
+		if (!iteratorActive || !isInQueue) {
+			//System.out.println("No interest in Session:"+datagramPacket.getData()[1]);
+			try {
+				dataStor.getInSktUDP().sendStr("finish "+datagramPacket.getData()[1], datagramPacket.getAddress(), datagramPacket.getPort());
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}

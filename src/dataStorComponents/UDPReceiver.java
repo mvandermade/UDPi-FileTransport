@@ -3,7 +3,6 @@ package dataStorComponents;
 import java.io.IOException;
 
 import shared.DataStor;
-import srv.SMain;
 
 public class UDPReceiver implements Runnable {
 	private DataStor dataStor;
@@ -23,6 +22,9 @@ public class UDPReceiver implements Runnable {
 			    
 				// wake the watchdog
 				dataStor.getWatchdog().unwaitThread();
+				
+				// wake uploadslot
+				dataStor.getUploadSlot().unwaitThread();
 
 			} catch (IOException e) {
 				e.printStackTrace();

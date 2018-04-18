@@ -1,8 +1,5 @@
 package dataStorComponents;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.UnknownHostException;
 import java.util.Iterator;
 
 import shared.DataStor;
@@ -60,7 +57,7 @@ public class UploadSlot implements Runnable {
     }
     
 	public void waitForSignal() {
-		System.out.println("uploader waits");
+		//System.out.println("uploader waits");
 		synchronized(this) {
 			while(waitState) {
 				try {
@@ -71,7 +68,7 @@ public class UploadSlot implements Runnable {
 				}
 			}
 		}
-		System.out.println("uploader active");
+		//System.out.println("uploader active");
 		
 	}
 	

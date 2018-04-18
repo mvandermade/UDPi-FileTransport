@@ -14,12 +14,11 @@ import dataStorComponents.UDPReceiver;
 import dataStorComponents.TransferDB;
 import dataStorComponents.UploadSlot;
 import dataStorComponents.Watchdog;
-import srv.InboundServerUtil;
 
 public class DataStor {
 	private String basePath;
 	private FileMan fileMan;
-	private int datagramSize = 1000;
+	private int datagramSize = 1400; // MTU of the network, ad hoc was ~1500MTU
 	private int headerSize = 14; // also set as beginning of the content block. currently: <1cmdtype><1sessionid><4byte chunckId><8byte CR32>
 	private int chuncksize;
 	private TransferDB transferDB;
@@ -30,7 +29,6 @@ public class DataStor {
 	private InboundDatagramUtil inboundDatagramUtil;
 	private int listnerPort;
 	private Thread uploadSlotThread;
-	private Boolean[] sleeperList;
 	private Watchdog watchdog;
 	private UploadSlot uploadSlot;
 	private ScrapeAgent scrapeAgent;
@@ -42,7 +40,7 @@ public class DataStor {
 	}
 
 	public DataStor(int listnerPort, String relativePath, InboundDatagramUtil inboundDatagramUtil) {
-		this.listnerPort = listnerPort;
+		this.setListnerPort(listnerPort);
 		this.setInboundDatagramUtil(inboundDatagramUtil);
 		// Filemanager in root
 		this.basePath = new File("").getAbsolutePath() + "/" + relativePath;
@@ -181,6 +179,14 @@ public class DataStor {
 
 	public void setScrapeAgent(ScrapeAgent scrapeAgent) {
 		this.scrapeAgent = scrapeAgent;
+	}
+
+	public int getListnerPort() {
+		return listnerPort;
+	}
+
+	public void setListnerPort(int listnerPort) {
+		this.listnerPort = listnerPort;
 	}
 
 }

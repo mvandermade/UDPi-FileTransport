@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 
 import dataStorComponents.InboundDatagramUtil;
 import dataStorComponents.TransferInfoInFile;
@@ -76,7 +75,7 @@ public class InboundServerUtil implements InboundDatagramUtil {
 			final String[] writeInTemp = new String[1];
 			if (stringIn.length() > 7) {
 				// Ommitting the space
-				int sessionIdin = Integer.parseInt(stringIn.substring(7, stringIn.length()));
+				int sessionIdin = (byte)Integer.parseInt(stringIn.substring(7, stringIn.length()));
 				//byte sessionIdin = (byte) stringIn.charAt(8);
 				
 				// Remove from queue
@@ -92,15 +91,21 @@ public class InboundServerUtil implements InboundDatagramUtil {
 						return false;
 					}
 				});
-				responseOut+=";"+writeInTemp[0];
+				
+				if (null!=writeInTemp[0]) {
+					responseOut+=";"+writeInTemp[0];
+				} else {
+					responseOut+=";Already removed";
+				}
+				
 			} else {
-				responseOut+= "Too little arguments for finish: finish <(char)sessionId>";
+				responseOut+= ";Too little arguments for finish: finish <(char)sessionId>";
 			}
 		
 		} else	if (stringIn.length() >= 10) {
 			
 			if (stringIn.split(";").length == 2) {
-				responseOut+="len is 2";
+				responseOut+="Server response: ";
 				if(stringIn.split(";")[1].substring(0, 6).equals("upload")) {
 			
 					// Check if got OK

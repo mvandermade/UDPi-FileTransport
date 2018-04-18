@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import shared.DataStor;
 
@@ -13,7 +14,7 @@ public class CMain {
 	private Thread senderThread;
 	private Thread keyboardInputListnerThread;
 	private String mostRecentKeyboardInput;
-	private InetAddress serverAddr = InetAddress.getByName("localhost");
+	private InetAddress serverAddr;
 	private int serverPort;
 	
 	private final Queue<String> keyboardInputQueue = new ConcurrentLinkedQueue<>();
@@ -21,6 +22,8 @@ public class CMain {
 	private KeyboardSender keyboardSender;
 	private int listenPort;
 	private String clientRootFolder;
+	private LinkedBlockingQueue<client.MacRssiPair[]> data;
+	private String serverIp;
 
 	public KeyboardSender getKeyboardSender() {
 		return keyboardSender;
@@ -34,10 +37,14 @@ public class CMain {
 		System.out.println("CLIENT");
 		// dataStor handles all shared components
 		// As well as booting threads, so reference is easier.
+		//this.serverIp = "192.168.1.1";
+		this.serverIp = "localhost";
+		this.serverAddr = InetAddress.getByName(serverIp);
 		this.serverPort = 4445;
 		this.listenPort = 4448;
 		this.clientRootFolder = "clientroot";
 		dataStor = new DataStor(listenPort, clientRootFolder, new InboundClientUtil(this));
+		System.out.println("CONNECTING  TO IP  : "+serverIp);
 		System.out.println("CONNECTING  TO PORT: "+serverPort);
 		System.out.println("LISTEN      AT PORT: "+listenPort);
 		System.out.println("WorkingDir         : "+clientRootFolder);
@@ -50,8 +57,6 @@ public class CMain {
 	    //System.out.println("booted keyBoardsender");
 	    // Interrupted also after watchdog finishes
 	    this.keyboardInputListner = new KeyBoardInputListner(this);
-	    
-
 	    
 		// Start Watchdog that will process the inboundQueue
 		// Watchdog can send messages
@@ -68,9 +73,20 @@ public class CMain {
 	    dataStor.getScrapeAgentThread().start();
 	    //System.out.println("Scrape Agent booted");
 	    
+	    // Wifi scanner from uTwente
+	    String targetIP = "127.0.0.1";
+	    int port = 2548;
+	    setData(new LinkedBlockingQueue<MacRssiPair[]>()); // Queue between communicator thread and this thread
+	    Thread communicator = new Thread(new DataReceiver(targetIP, port, getWifiData()));
+		communicator.start();		
+	    
+		
+		// Keyboard scanner
 	    this.keyboardInputListnerThread = new Thread(keyboardInputListner);
 	    keyboardInputListnerThread.start();
 	    //System.out.println("booted keyboard listner");
+	    
+	    
 	    
 	    
 	}
@@ -122,6 +138,14 @@ public class CMain {
 
 	public void setServerAddr(InetAddress serverAddr) {
 		this.serverAddr = serverAddr;
+	}
+
+	public LinkedBlockingQueue<client.MacRssiPair[]> getWifiData() {
+		return data;
+	}
+
+	public void setData(LinkedBlockingQueue<client.MacRssiPair[]> data) {
+		this.data = data;
 	}
 
 }

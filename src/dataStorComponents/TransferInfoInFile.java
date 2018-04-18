@@ -1,18 +1,12 @@
 package dataStorComponents;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.ZonedDateTime;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.zip.CRC32;
@@ -20,7 +14,6 @@ import java.util.zip.Checksum;
 
 import shared.ByteCalculator;
 import shared.DataStor;
-import srv.SMain;
 
 public class TransferInfoInFile {
 	byte sessionId; // To be set by sender
@@ -46,6 +39,8 @@ public class TransferInfoInFile {
 	private String[] parts;
 	private int fileSpeed;
 	private float fileTimeElapsedSeconds;
+	private int lastCountOK;
+	private long retransmissionTimeStamp;
 	
 
 	public TransferInfoInFile(String[] parts, String filename, DatagramPacket datagramPacket, DataStor dataStor) {
@@ -58,10 +53,13 @@ public class TransferInfoInFile {
 		this.shaChecksumRemote = parts[4];
 		this.sessionId = (byte) Integer.parseInt(parts[5]);
 		this.countOK = 0;
+		this.lastCountOK=0;
 		// highest OK count, to determine stalls
 		this.deltaSum = 0;
 		this.timerLastScrape = getLongTimeEpochSecond();
 		this.timerLastPkt = getLongTimeEpochSecond();
+		
+		this.retransmissionTimeStamp = getLongTimeEpochSecond();
 		
 		// Ceil, the last chunck needs to be padded
 		this.chunckTotal = Integer.parseInt(parts[2]);
@@ -110,6 +108,7 @@ public class TransferInfoInFile {
 	
 	public void writeDatagramToDisk(DatagramPacket datagramPacket) {
 		// TODO Auto-generated method stub
+		//System.out.println("write to disk"+countOK+"/"+chunckTotal);
 		int chunckId = shared.ByteCalculator.byteArrayToLeInt(Arrays.copyOfRange(datagramPacket.getData(), dataStor.getPacketPointerChunckId(), dataStor.getPacketPointerCRC()));
 		byte [] contents = Arrays.copyOfRange(datagramPacket.getData(), dataStor.getPacketPointerContents(), datagramPacket.getData().length);
 		
@@ -141,7 +140,7 @@ public class TransferInfoInFile {
 				writeChunckToDisk(chunckId, contents);
 				//
 			} else {
-				System.out.println("Already have:"+chunckId);
+				//System.out.println("Already have:"+chunckId);
 			}
 			
 			
@@ -178,8 +177,7 @@ public class TransferInfoInFile {
 	public void ceaseDownload() {
 		try {
 			System.out.println("download OK. Report for: "+file.getName());
-			this.fileTimeElapsedSeconds = deltaSum/1000000000;
-			this.fileSpeed = (int)((float)fileSizeBytes/( fileTimeElapsedSeconds ));
+			updateSpeedElapsedTime();
 			
 			System.out.println(dataStor.getFileMan().sizeHumanReadableStr(fileSpeed)+"/s, took "+fileTimeElapsedSeconds+" seconds total"); //mb/s
 			this.raf.close();
@@ -206,13 +204,23 @@ public class TransferInfoInFile {
 			});
 			
 			// Notify the server
+			// Packet loss prevention
 			dataStor.getInSktUDP().sendStr("finish "+parts[5], this.getReqAddress(), this.getReqPort());
+			dataStor.getInSktUDP().sendStr("finish "+parts[5], this.getReqAddress(), this.getReqPort());
+			dataStor.getInSktUDP().sendStr("finish "+parts[5], this.getReqAddress(), this.getReqPort());
+			System.out.println("ending:"+parts[5]);
 
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+
+	public void updateSpeedElapsedTime() {
+		this.fileTimeElapsedSeconds = deltaSum/1000000000;
+		this.fileSpeed = (int)((float)fileSizeBytes/( fileTimeElapsedSeconds ));
 	}
 	
 	public long scrape(long scrapeTimer) {
@@ -224,33 +232,32 @@ public class TransferInfoInFile {
 			countOC = countOK;
 		}
 		
-		long theoreticalNextDeltaPoint = 10000*(deltaSum/countOC);
+		long theoreticalNextDeltaPoint = 3*(this.timerLastScrape-this.timeStamp)/(long)countOC;
+		//System.out.println("nextdeltapoint");
+		//System.out.println(10*(deltaSum/countOC));
+		//System.out.println("scrapetimer");
+		//System.out.println(scrapeTimer);
+		//System.out.println("my wish:");
+		//System.out.println(theoreticalNextDeltaPoint+this.timerLastScrape);
 		
-		// Check if the scrape is 'late'
+		//System.out.println((theoreticalNextDeltaPoint+this.timerLastScrape) - scrapeTimer);
+		
+		// Check if the scrape for this file OK (could be in queue)
 		if (scrapeTimer > theoreticalNextDeltaPoint+this.timerLastScrape) {
+			
+			this.timerLastScrape = getLongTimeEpochSecond();
 			// yes it is time for a scrape
 			// Report ANY false to the server
-			
-			// 5 sec retransmission window
-			// 10MB/s should be sufficient ?
-			if ((float)countOK/(float)chunckTotal > 0.99 || (this.getLongTimeEpochSecond() - this.timeStamp)/1000000000 > (this.fileSizeBytes/10000000) || (deltaSum/countOC) > 1000000000) {
-				this.timeStamp = this.getLongTimeEpochSecond();
-				for (int i = 0; i < chunckOK.length; i++) {
-					if (!chunckOK[i]) {
-						dataStor.getInSktUDP().sendChunckRequestTo(this.getSessionId(), i, this.getReqAddress(), this.getReqPort());
-						chuncksRetransmitTimes[i]++;
-						
-						//System.out.println("retransmission request for"+i);
-					}
-				}
+			//System.out.println((this.retransmissionTimeStamp+theoreticalNextDeltaPoint*2) < scrapeTimer);
+			// This is because 0 is most likely to receive the initial udp packets
+			if (this.lastCountOK == this.countOK && this.countOK!=0 && (this.retransmissionTimeStamp+theoreticalNextDeltaPoint*2) < scrapeTimer) {
+				manualScrape();
 			} else {
-				//System.out.println("too small");
+				// Record
+				//System.out.println("no scrape!");
+				this.lastCountOK = this.countOK;
 			}
-			// Make adjustments for RTT
-			theoreticalNextDeltaPoint = 30000*(deltaSum/countOC);
 			
-		} else {
-			theoreticalNextDeltaPoint = 10000*(deltaSum/countOC);
 		}
 		
 		this.timerLastScrape = getLongTimeEpochSecond();
@@ -258,6 +265,31 @@ public class TransferInfoInFile {
 		
 		return theoreticalNextDeltaPoint;
 		
+	}
+
+
+	public void manualScrape() {
+		System.out.println("retransmissions requested by scraper");
+		this.retransmissionTimeStamp = getLongTimeEpochSecond();
+		for (int i = 0; i < chunckOK.length; i++) {
+			if (!chunckOK[i]) {
+				dataStor.getInSktUDP().sendChunckRequestTo(this.getSessionId(), i, this.getReqAddress(), this.getReqPort());
+				chuncksRetransmitTimes[i]++;
+				
+				//System.out.println("retransmission request for"+i);
+			}
+		}
+	}
+	
+	public String reportDownloadInfo() {
+		// TODO Auto-generated method stub
+		updateSpeedElapsedTime();
+		
+		String response = "\n"+this.file.getName()+" - "+dataStor.getFileMan().sizeHumanReadableStr(this.fileSizeBytes)+"\t"+((float)countOK/(float)chunckTotal)*100+"%\n"
+				+"BlocksOK:"+countOK+"/"+chunckTotal+"\n"+
+				"totalSpeed:"+dataStor.getFileMan().sizeHumanReadableStr(fileSpeed)+"/s, elapsed time: "+fileTimeElapsedSeconds+" total"+"\n"
+				+"Retransmissions: "+IntStream.of(chuncksRetransmitTimes).sum()+"\n--";
+		return response;
 	}
 
 

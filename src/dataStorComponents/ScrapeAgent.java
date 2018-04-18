@@ -22,10 +22,11 @@ public class ScrapeAgent implements Runnable {
 			
 			boolean done = false;
 			while (!done) {
+				//System.out.println("scraping");
 				// Prove it's not done
 				done = true;
 				// Scraper is done when downloads = 0
-				int downloadsActive=0;
+				//int downloadsActive=0;
 				Iterator<TransferInfoInFile> iter = dataStor.getTransferDB().getDownloadSlots().iterator();
 				// Check if the session id and datagram port and IP are enlisted.
 				// The iterator makes sure FUP is achieved
@@ -43,7 +44,7 @@ public class ScrapeAgent implements Runnable {
 					}
 					
 					done = false;
-					downloadsActive++;
+					//downloadsActive++;
 				 }
 				
 				

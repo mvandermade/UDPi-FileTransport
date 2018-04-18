@@ -40,6 +40,7 @@ public class InboundClientUtil implements InboundDatagramUtil {
 				if (stringIn.length() >= 20 && stringIn.substring(0, 8).equals("download")) {
 					// Check if got OK
 					String answ = stringIn.substring(cl.getMostRecentKeyboardInput().length()+1,stringIn.length());
+					System.out.println(answ);
 					if (answ.substring(0,2).equals("OK")) {
 						System.out.println("DOWNLOAD Initializing (client)");
 						String[] parts = answ.split(",");
@@ -71,28 +72,53 @@ public class InboundClientUtil implements InboundDatagramUtil {
 					if (stringIn.split(";").length == 2) {
 						// Ommitting the space
 						String stringFinish = stringIn.split(";")[0];
-						int sessionIdin = Integer.parseInt(stringFinish.substring(7, stringFinish.length()));
+						int sessionIdin = (byte)Integer.parseInt(stringFinish.substring(7, stringFinish.length()));
 						//byte sessionIdin = (byte) stringIn.charAt(8);
-						System.out.println(stringIn.split(";")[1]);
 						// Remove from queue
 						cl.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
 							if (sessionIdin==c.getSessionId() &&
 									c.getReqAddress().equals(datagramPacket.getAddress()) &&
 											c.getReqPort() == datagramPacket.getPort()) {
-								System.out.println("uploadremoved from queue");
 								return true;
 								
 							} else {
 								return false;
 							}
 						});
+					} else if (stringIn.length() > 7) {
+						// Ommitting the space
+						int sessionIdin = (byte)Integer.parseInt(stringIn.substring(7, stringIn.length()));
+						//byte sessionIdin = (byte) stringIn.charAt(8);
+						final String[] writeInTemp = new String[1];
+						// Remove from queue
+						cl.getDataStor().getTransferDB().getUploadSlots().removeIf((c)->{
+							if (sessionIdin==c.getSessionId() &&
+									c.getReqAddress().equals(datagramPacket.getAddress()) &&
+											c.getReqPort() == datagramPacket.getPort()) {
+								System.out.println("uploadOK, removed from queue");
+								writeInTemp[0] = c.getPacketlossInfo();
+								return true;
+								
+							} else {
+								return false;
+							}
+						});
+						
+						if (null!=writeInTemp[0]) {
+							System.out.println(writeInTemp[0]);
+						} else {
+							System.out.println("Already removed upload");
+						}
+						
 					}
 				}
 			} else {
 				// INFO message or something?
 				if (stringIn.split(";").length == 2) {
+					//System.out.println("twopart");
 					System.out.println("\t\t"+stringIn.split(";")[1]);
 				} else {
+					//System.out.println("onepart");
 					System.out.println("\t\t"+stringIn);
 				}
 			}

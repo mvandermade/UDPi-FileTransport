@@ -2,19 +2,15 @@ package dataStorComponents;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Queue;
 
 public class FileMan {
 	
 	File folder;
 	private String path;
-	
-	private final Queue<Integer> readers = null;
 	
 	public FileMan(String path) {
 		

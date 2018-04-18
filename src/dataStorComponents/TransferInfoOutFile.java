@@ -1,26 +1,21 @@
 package dataStorComponents;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.IntStream;
 
 import shared.ByteCalculator;
 import shared.DataStor;
-import srv.SMain;
 
 public class TransferInfoOutFile {
 	private DataStor dataStor;
@@ -91,7 +86,6 @@ public class TransferInfoOutFile {
 
 
 	public String strReport() {
-		// TODO Auto-generated method stub
 		String response = "";
 		response+= "OK,"+fileSizeBytes+","+chunckTotal+","+chunckSize+","+shaChecksum+","+sessionId;
 		return response;
@@ -165,6 +159,13 @@ public class TransferInfoOutFile {
 		int response = IntStream.of(chunckTransmissionCountArray).sum()-chunckTransmissionCountArray.length;
 		
 		return "Server retransmissions:  " + response;
+	}
+
+
+	public String reportUploadInfo() {
+		String response = "\n"+this.file.getName()+" - "+dataStor.getFileMan().sizeHumanReadableStr(this.fileSizeBytes)+"\t#chuncks:"+chunckTotal+"\n"
+				+"Chuncks sent/enqueued: "+IntStream.of(chunckTransmissionCountArray).sum()+"\n"+getPacketlossInfo()+"\nSha-1 checksum: "+shaChecksum;
+		return response;
 	}
 
 }
