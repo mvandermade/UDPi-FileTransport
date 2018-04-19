@@ -72,14 +72,6 @@ public class TransferInfoInFile {
 		this.file = dataStor.getFileMan().makefile(filename, fileSizeBytes);
 		
 		try {
-			if (file.exists()) {
-				Random r = new Random();
-				String c = (char)(r.nextInt(26) + 'a')+""+(char)(r.nextInt(26) + 'a')+(char)(r.nextInt(26) + 'a');
-				String fp = file.getAbsolutePath();
-				
-				
-				file = new File(fp.substring(0,fp.length()-5)+"copy"+c+fp.substring(fp.length()-5,fp.length()));
-			}
 			raf = new RandomAccessFile(this.file.getAbsoluteFile(), "rw");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block

@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
 public class FileMan {
 	
@@ -108,6 +109,15 @@ public class FileMan {
 		// TODO Auto-generated method stub
 		FileOutputStream s;
 		try {
+//			if (file.exists()) {
+//				Random r = new Random();
+//				String c = (char)(r.nextInt(26) + 'a')+""+(char)(r.nextInt(26) + 'a')+(char)(r.nextInt(26) + 'a');
+//				String fp = file.getAbsolutePath();
+//				
+//				
+//				file = new File(fp.substring(0,fp.length()-5)+"copy_"+c+fp.substring(fp.length()-5,fp.length()));
+//			}
+			
 			s = new FileOutputStream(this.path+"/"+filename);
 			System.out.println("file:"+filename+" created");
 			byte[] buf = new byte[fileSizeBytes];
